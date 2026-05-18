@@ -91,7 +91,7 @@ fun CurrencyConverterApp() {
                         ) {
                             if (inputValue.isEmpty()) Text(
                                 stringResource(id = R.string.enter_value_hint),
-                                color = Color.Gray
+                                color = Color.DarkGray
                             )
                             innerTextField()
                         }
