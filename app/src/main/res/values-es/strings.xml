@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Cambio</string>
-    <string name="money_image_description">Imagem de dinero</string>
-    <string name="enter_value_hint">Cuenta</string>
+    <string name="money_image_description">Imagem de Dinero</string>
+    <string name="enter_value_hint">"Introduzca el valor "</string>
     <string name="euro_to_real">Euro -> Real</string>
     <string name="real_to_euro">Real -> Euro</string>
     <string name="dollar_to_real">Dólar -> Real</string>
     <string name="dollar_to_euro">Dólar -> Euro</string>
-    <string name="result_text">Se lascou: %.2f</string>
+    <string name="result_text">Resultado: %.2f</string>
     <string name="latest_quotes_title">Últimas Cotações</string>
     <string name="euro_label">Euro</string>
     <string name="dollar_label">Dólar</string>

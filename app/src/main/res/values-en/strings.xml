@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">eXchange</string>
+    <string name="dollar_to_euro">Dollar -> Euro</string>
     <string name="result_text">Result: %.2f</string>
+    <string name="money_image_description">Money Image</string>
+    <string name="enter_value_hint">Enter the value</string>
+    <string name="euro_to_real">Euro -> Real</string>
+    <string name="real_to_euro">Real -> Euro</string>
+    <string name="dollar_to_real">Dollar -> Real</string>
+    <string name="latest_quotes_title">Latest Exchange Rate</string>
+    <string name="euro_label">Euro</string>
+    <string name="dollar_label">Dollar</string>
+    <string name="quote_item">%s: R$ %s</string>
 </resources>
