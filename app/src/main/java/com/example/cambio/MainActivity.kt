@@ -22,6 +22,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.cambio.ui.theme.CambioTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.BufferedInputStream
@@ -36,7 +37,14 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            CurrencyConverterApp()
+            CambioTheme {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    CurrencyConverterApp()
+                }
+            }
         }
     }
 }
@@ -54,13 +62,12 @@ fun CurrencyConverterApp() {
     }
 
 
-    MaterialTheme {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
             // Imagem de dinheiro
             Image(
                 painter = painterResource(id = R.drawable.ic_money), // Substitua por sua imagem
@@ -81,17 +88,18 @@ fun CurrencyConverterApp() {
                         .fillMaxWidth()
                         .padding(15.dp),
                     singleLine = true,
+                    textStyle = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurface),
                     decorationBox = { innerTextField ->
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(8.dp)
-                                .background(Color.LightGray),
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
                             contentAlignment = Alignment.CenterStart
                         ) {
                             if (inputValue.isEmpty()) Text(
                                 stringResource(id = R.string.enter_value_hint),
-                                color = Color.DarkGray
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             innerTextField()
                         }
@@ -109,7 +117,7 @@ fun CurrencyConverterApp() {
                 stringResource(id = R.string.dollar_to_euro)
             )
             val locale = Resources.getSystem().configuration.locales[0].language
-            val menuColor = if (locale == "pt") Color.LightGray else Color.Magenta
+            val menuColor = if (locale == "pt") MaterialTheme.colorScheme.secondaryContainer else Color.Magenta
             var selectedConversion by remember { mutableStateOf(conversionOptions.first()) }
             DropdownMenuField(
                 options = conversionOptions,
@@ -150,7 +158,6 @@ fun CurrencyConverterApp() {
             }
         }
     }
-}
 
 
 // Função suspensa que simula a busca de cotações
