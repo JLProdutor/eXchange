@@ -23,6 +23,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.cambio.ui.theme.CambioTheme
+import com.google.gson.Gson
+import com.google.gson.JsonObject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.BufferedInputStream
@@ -31,6 +33,9 @@ import java.io.IOException
 import java.io.InputStream
 import java.net.MalformedURLException
 import java.net.URL
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import javax.net.ssl.HttpsURLConnection
 
 class MainActivity : ComponentActivity() {
@@ -38,6 +43,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             CambioTheme {
+                // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -54,7 +60,6 @@ data class Cotacao(val moeda: String, val valor: String, val data: String)
 @Composable
 fun CurrencyConverterApp() {
     var cotacoes by remember { mutableStateOf<List<Cotacao>>(emptyList()) }
-    val coroutineScope = rememberCoroutineScope()
 
     // Carrega os dados quando a tela inicia
     LaunchedEffect(Unit) {
@@ -129,8 +134,20 @@ fun CurrencyConverterApp() {
             Spacer(modifier = Modifier.height(16.dp))
 
             // Campo para exibição do resultado da conversão
+            val amount = inputValue.replace(",", ".").toDoubleOrNull() ?: 0.0
+            val dollarRate = cotacoes.firstOrNull { it.moeda == "Dólar" }?.valor?.replace(",", ".")?.toDoubleOrNull() ?: 1.0
+            val euroRate = cotacoes.firstOrNull { it.moeda == "Euro" }?.valor?.replace(",", ".")?.toDoubleOrNull() ?: 1.0
+
+            val result = when (selectedConversion) {
+                stringResource(id = R.string.euro_to_real) -> amount * euroRate
+                stringResource(id = R.string.real_to_euro) -> if (euroRate != 0.0) amount / euroRate else 0.0
+                stringResource(id = R.string.dollar_to_real) -> amount * dollarRate
+                stringResource(id = R.string.dollar_to_euro) -> if (euroRate != 0.0) (amount * dollarRate) / euroRate else 0.0
+                else -> 0.0
+            }
+
             Text(
-                text = stringResource(id = R.string.result_text, (inputValue.toDoubleOrNull() ?: 0.0) * 5.0),
+                text = stringResource(id = R.string.result_text, result),
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -160,27 +177,69 @@ fun CurrencyConverterApp() {
     }
 
 
-// Função suspensa que simula a busca de cotações
+// Função suspensa que busca cotações reais da API do Banco Central
 suspend fun buscarCotacoes(): List<Cotacao> {
-
-    return listOf(
-        Cotacao("Euro", "6.55", "09/02/2025"),
-        Cotacao("Euro", "6.58", "08/02/2025"),
-        Cotacao("Euro", "6.50", "07/02/2025"),
-        Cotacao("Dólar", "6.10", "09/02/2025"),
-        Cotacao("Dólar", "6.06", "08/02/2025"),
-        buscarCotacaoDolar("07/02/2025")
-    )
+    val lista = mutableListOf<Cotacao>()
+    val datas = (0..2).map {
+        LocalDate.now().minusDays(it.toLong())
+    }
+    for (data in datas){
+        val dataFormatadaApi = data.format(DateTimeFormatter.ofPattern("MM-dd-yyyy"))
+        val dataFormatadaTela = data.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+        buscarMoeda(
+            moeda = "USD",
+            nomeMoeda = "Dólar",
+            dataApi = dataFormatadaApi,
+            dataTela = dataFormatadaTela
+        )?.let{
+            lista.add(it)
+        }
+        buscarMoeda(
+            moeda = "EUR",
+            nomeMoeda = "Euro",
+            dataApi = dataFormatadaApi,
+            dataTela = dataFormatadaTela
+        )?.let{
+            lista.add(it)
+        }
+    }
+    return lista
 }
 
-//Recuperando a cotação do dia 07/02/2025
-suspend fun buscarCotacaoDolar(data: String): Cotacao {
-    val response:String? =mLoad("https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoDolarDia(dataCotacao=@dataCotacao)?@dataCotacao=%2702-07-2025%27&\$top=100&\$format=json&\$select=cotacaoCompra,dataHoraCotacao")?.readText()
-    Log.v("Retorno:","retorno:"+response)
-    return Cotacao("Dólar", "5,75", data)
-
+// Recuperando a cotação do dia da API do Banco Central
+suspend fun buscarMoeda(
+    moeda: String,
+    nomeMoeda: String,
+    dataApi: String,
+    dataTela: String
+): Cotacao? {
+    val url = "https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoMoedaDia(moeda=@moeda,dataCotacao=@dataCotacao)?@moeda='$moeda'&@dataCotacao='$dataApi'&\$top=10&\$orderby=dataHoraCotacao%20desc&\$select=cotacaoCompra,dataHoraCotacao&\$format=json"
+    return try {
+        val response = mLoad(url)?.readText()
+        Log.v("API", response ?: "Resposta vazia")
+        if (response.isNullOrEmpty()){
+            return null
+        }
+        val gson = Gson()
+        val json = gson.fromJson(response, JsonObject::class.java)
+        val valueArray = json.getAsJsonArray("value")
+        if(valueArray == null || valueArray.size() == 0){
+            return null
+        }
+        val item = valueArray.get(0).asJsonObject
+        val cotacaoCompra = item.get("cotacaoCompra").asDouble
+        Cotacao(
+            moeda = nomeMoeda,
+            valor = String.format(Locale.getDefault(), "%.2f", cotacaoCompra),
+            data = dataTela
+        )
+    } catch (e: Exception){
+        Log.e("API", "Erro: ${e.message}")
+        null
+    }
 }
-suspend fun mLoad(string: String): BufferedReader? {
+
+suspend fun mLoad(string: String): BufferedReader? = withContext(Dispatchers.IO) {
     val url: URL = mStringToURL(string)!!
     val connection: HttpsURLConnection?
     try {
@@ -189,19 +248,19 @@ suspend fun mLoad(string: String): BufferedReader? {
         connection.connectTimeout= 20000
         connection.connect()
 
-        Log.v("PDM", "Response Code: "+connection.responseCode)
-        Log.v("PDM", "Response: "+connection.responseMessage)
+        Log.v("PDM", "Response Code: ${connection.responseCode}")
+        Log.v("PDM", "Response: ${connection.responseMessage}")
 
         val inputStream: InputStream = connection.inputStream
         val bufferedInputStream = BufferedInputStream(inputStream)
-        return bufferedInputStream.bufferedReader(Charsets.UTF_8)
+        bufferedInputStream.bufferedReader(Charsets.UTF_8)
     } catch (e: IOException) {
         e.printStackTrace()
-        Log.v("PDM", "Erro de comunicação: "+e.message)
-
+        Log.v("PDM", "Erro de comunicação: ${e.message}")
+        null
     }
-    return null
 }
+
 // Function to convert string to URL
 private fun mStringToURL(string: String): URL? {
     try {
@@ -212,6 +271,7 @@ private fun mStringToURL(string: String): URL? {
     }
     return null
 }
+
 @Composable
 fun DropdownMenuField(
     options: List<String>,
